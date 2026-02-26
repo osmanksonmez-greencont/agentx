@@ -155,6 +155,9 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
             user = self._auth_user() or {"name": "unknown", "role": "viewer"}
             return _json(self, {"user": user})
 
+        if path == "/api/projects":
+            return _json(self, {"projects": self.ctx.store.list_projects()})
+
         if path == "/api/agents":
             return _json(self, {"agents": self.ctx.store.list_agents()})
 

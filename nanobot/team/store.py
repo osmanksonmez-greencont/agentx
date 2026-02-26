@@ -135,6 +135,37 @@ class TeamStore:
             )
             self._conn.commit()
 
+    def list_projects(self) -> list[dict[str, Any]]:
+        """List all projects with their stats."""
+        with self._lock:
+            rows = self._conn.execute(
+                """
+                SELECT 
+                    p.id,
+                    p.created_at,
+                    p.updated_at,
+                    COUNT(DISTINCT t.id) as task_count,
+                    COUNT(DISTINCT CASE WHEN t.status = 'done' THEN t.id END) as done_count,
+                    COUNT(DISTINCT e.id) as event_count
+                FROM team_projects p
+                LEFT JOIN team_tasks t ON t.project_id = p.id
+                LEFT JOIN team_events e ON e.project_id = p.id
+                GROUP BY p.id
+                ORDER BY p.updated_at DESC
+                """
+            ).fetchall()
+        out: list[dict[str, Any]] = []
+        for r in rows:
+            out.append({
+                "id": r["id"],
+                "createdAt": r["created_at"],
+                "updatedAt": r["updated_at"],
+                "taskCount": r["task_count"],
+                "doneCount": r["done_count"],
+                "eventCount": r["event_count"],
+            })
+        return out
+
     def ensure_project(self, project_id: str) -> None:
         now = _now()
         with self._lock:

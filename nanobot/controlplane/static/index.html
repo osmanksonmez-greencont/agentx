@@ -6,79 +6,200 @@
   <title>AgentX Control Plane</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/panel/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/panel/style.css">
 </head>
 <body>
-  <div class="bg-shape shape-a"></div>
-  <div class="bg-shape shape-b"></div>
-  <header>
-    <h1>AgentX Control Plane</h1>
-    <p>24/7 Multi-Agent Software Engineering Team</p>
-    <div class="row">
-      <input id="apiToken" placeholder="API token (optional)" />
-      <button id="saveToken">Save Token</button>
-    </div>
-  </header>
-
-  <nav>
-    <button data-tab="activity" class="active">Activity</button>
-    <button data-tab="board">Kanban</button>
-    <button data-tab="usage">Usage</button>
-    <button data-tab="jobs">Schedules</button>
-    <button data-tab="terminal">Terminal</button>
-    <button data-tab="config">Config</button>
-  </nav>
-
-  <main>
-    <section id="activity" class="tab active">
-      <div class="row">
-        <input id="projectId" value="default" placeholder="project id" />
-        <button id="refreshActivity">Refresh</button>
+  <div class="app">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="logo">
+        <span class="logo-icon">⬡</span>
+        <span class="logo-text">AgentX</span>
       </div>
-      <h3>Agents</h3>
-      <pre id="agentsView"></pre>
-      <h3>Events</h3>
-      <pre id="eventsView"></pre>
-    </section>
+      
+      <nav class="nav">
+        <button class="nav-item active" data-tab="activity">
+          <span class="nav-icon">◉</span>
+          <span class="nav-label">Activity</span>
+        </button>
+        <button class="nav-item" data-tab="board">
+          <span class="nav-icon">▦</span>
+          <span class="nav-label">Board</span>
+        </button>
+        <button class="nav-item" data-tab="usage">
+          <span class="nav-icon">◔</span>
+          <span class="nav-label">Usage</span>
+        </button>
+        <button class="nav-item" data-tab="jobs">
+          <span class="nav-icon">⚙</span>
+          <span class="nav-label">Jobs</span>
+        </button>
+        <button class="nav-item" data-tab="terminal">
+          <span class="nav-icon">▷</span>
+          <span class="nav-label">Terminal</span>
+        </button>
+        <button class="nav-item" data-tab="config">
+          <span class="nav-icon">⚐</span>
+          <span class="nav-label">Config</span>
+        </button>
+      </nav>
 
-    <section id="board" class="tab">
-      <div class="row">
-        <button id="refreshBoard">Refresh Board</button>
+      <div class="sidebar-footer">
+        <div class="api-token">
+          <input type="password" id="apiToken" placeholder="API Token" />
+          <button id="saveToken" title="Save Token">✓</button>
+        </div>
       </div>
-      <div id="boardView" class="board"></div>
-    </section>
+    </aside>
 
-    <section id="usage" class="tab">
-      <button id="refreshUsage">Refresh Usage</button>
-      <pre id="usageView"></pre>
-    </section>
+    <!-- Main Content -->
+    <main class="main">
+      <!-- Header -->
+      <header class="header">
+        <div class="header-left">
+          <h1 id="pageTitle">Activity</h1>
+        </div>
+        <div class="header-right">
+          <div class="project-chips" id="projectChips">
+            <!-- Project chips will be rendered here -->
+          </div>
+          <div class="auto-refresh">
+            <button id="autoRefreshToggle" class="toggle-btn active" title="Auto-refresh">
+              <span class="toggle-icon">↻</span>
+              <span class="toggle-label">15s</span>
+            </button>
+          </div>
+          <div class="last-update" id="lastUpdate"></div>
+        </div>
+      </header>
 
-    <section id="jobs" class="tab">
-      <button id="refreshJobs">Refresh Jobs</button>
-      <pre id="jobsView"></pre>
-    </section>
+      <!-- Activity Tab -->
+      <section id="activity" class="tab active">
+        <div class="panel">
+          <div class="panel-header">
+            <h2>Agents</h2>
+            <button id="refreshActivity" class="btn-icon" title="Refresh">↻</button>
+          </div>
+          <div class="agents-grid" id="agentsView">
+            <!-- Agents will be rendered here -->
+          </div>
+        </div>
 
-    <section id="terminal" class="tab">
-      <div class="row">
-        <input id="termCommand" value="bash" />
-        <button id="createSession">Create Session</button>
-      </div>
-      <div class="row">
-        <input id="sessionId" placeholder="session id" />
-        <input id="termInput" placeholder="command (e.g. ls -la\n)" />
-        <button id="sendTerm">Send</button>
-        <button id="readTerm">Read</button>
-      </div>
-      <pre id="terminalView"></pre>
-    </section>
+        <div class="panel">
+          <div class="panel-header">
+            <h2>Recent Events</h2>
+            <span class="badge" id="eventCount">0</span>
+          </div>
+          <div class="events-list" id="eventsView">
+            <!-- Events will be rendered here -->
+          </div>
+        </div>
+      </section>
 
-    <section id="config" class="tab">
-      <button id="loadConfig">Load Config</button>
-      <button id="saveConfig">Save Config</button>
-      <textarea id="configEditor"></textarea>
-    </section>
-  </main>
+      <!-- Board Tab -->
+      <section id="board" class="tab">
+        <div class="board-header">
+          <h2>Task Board <span class="board-subtitle">All Projects</span></h2>
+        </div>
+        <div class="trello-board" id="boardView">
+          <!-- Board columns will be rendered here -->
+        </div>
+      </section>
+
+      <!-- Usage Tab -->
+      <section id="usage" class="tab">
+        <div class="usage-grid">
+          <div class="usage-card">
+            <div class="usage-card-header">
+              <span class="usage-icon">📊</span>
+              <h3>Total Usage</h3>
+            </div>
+            <div class="usage-stats" id="usageSummary">
+              <!-- Usage stats will be rendered here -->
+            </div>
+          </div>
+          
+          <div class="usage-card wide">
+            <div class="usage-card-header">
+              <span class="usage-icon">📈</span>
+              <h3>Breakdown by Project</h3>
+            </div>
+            <div class="usage-breakdown" id="usageBreakdown">
+              <!-- Breakdown will be rendered here -->
+            </div>
+          </div>
+        </div>
+        
+        <div class="panel">
+          <div class="panel-header">
+            <h2>Raw JSON</h2>
+            <button id="refreshUsage" class="btn-icon" title="Refresh">↻</button>
+          </div>
+          <pre id="usageView" class="code-block"></pre>
+        </div>
+      </section>
+
+      <!-- Jobs Tab -->
+      <section id="jobs" class="tab">
+        <div class="panel">
+          <div class="panel-header">
+            <h2>Scheduled Jobs</h2>
+            <div class="btn-group">
+              <button id="addJob" class="btn">+ Add Job</button>
+              <button id="refreshJobs" class="btn-icon" title="Refresh">↻</button>
+            </div>
+          </div>
+          <div class="data-table-wrapper">
+            <table class="data-table" id="jobsTable">
+              <thead>
+                <tr>
+                  <th>Job ID</th>
+                  <th>Name</th>
+                  <th>Schedule</th>
+                  <th>Next Run</th>
+                  <th>Last Run</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="jobsView">
+                <!-- Jobs will be rendered here -->
+              </tbody>
+            </table>
+          </div>
+          <div class="table-footer">
+            <span class="table-info" id="jobsInfo">Loading...</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Terminal Tab -->
+      <section id="terminal" class="tab">
+        <div class="terminal-controls">
+          <input id="termCommand" value="bash" placeholder="Command" />
+          <button id="createSession" class="btn">New Session</button>
+          <button id="sendTerm" class="btn">Send</button>
+          <button id="readTerm" class="btn">Read</button>
+        </div>
+        <div class="terminal-output" id="termOutput"></div>
+      </section>
+
+      <!-- Config Tab -->
+      <section id="config" class="tab">
+        <div class="panel">
+          <div class="panel-header">
+            <h2>Configuration</h2>
+            <div class="btn-group">
+              <button id="loadConfig" class="btn">Load</button>
+              <button id="saveConfig" class="btn btn-primary">Save</button>
+            </div>
+          </div>
+          <textarea id="configView" class="config-editor"></textarea>
+        </div>
+      </section>
+    </main>
+  </div>
 
   <script src="/panel/app.js"></script>
 </body>
