@@ -292,7 +292,7 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
         return
 
 
-def serve_control_plane(host: str = "127.0.0.1", port: int = 28880) -> None:
+def serve_control_plane(host: str = "0.0.0.0", port: int = 28880) -> None:
     config = load_config()
     store = TeamRuntime.make_store(config)
     store.ensure_project("default")

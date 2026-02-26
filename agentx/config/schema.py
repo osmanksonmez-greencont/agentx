@@ -380,7 +380,7 @@ class ControlPlaneConfig(Base):
     """Control-plane server config and access control."""
 
     enabled: bool = True
-    host: str = "127.0.0.1"
+    host: str = "0.0.0.0"
     port: int = 28880
     users: list[ControlPlaneUser] = Field(default_factory=list)
 

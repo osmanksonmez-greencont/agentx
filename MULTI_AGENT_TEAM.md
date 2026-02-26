@@ -44,7 +44,7 @@ agentx team board --project agentx
 agentx team events --project agentx --limit 30
 
 # Start management API + web panel
-agentx controlplane --host 127.0.0.1 --port 28880
+agentx controlplane --host 0.0.0.0 --port 28880
 # open http://127.0.0.1:28880/panel
 
 # Backup/restore

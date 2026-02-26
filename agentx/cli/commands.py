@@ -1040,7 +1040,7 @@ def cron_run(
 
 @app.command("controlplane")
 def controlplane(
-    host: str = typer.Option("127.0.0.1", "--host", help="Control-plane bind host"),
+    host: str = typer.Option("0.0.0.0", "--host", help="Control-plane bind host"),
     port: int = typer.Option(28880, "--port", "-p", help="Control-plane port"),
 ):
     """Run management API + panel."""
@@ -1048,7 +1048,7 @@ def controlplane(
     from agentx.controlplane.server import serve_control_plane
 
     cfg = load_config()
-    if host == "127.0.0.1":
+    if host == "0.0.0.0":
         host = cfg.control_plane.host
     if port == 28880:
         port = cfg.control_plane.port

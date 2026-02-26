@@ -90,7 +90,7 @@ Configure `~/.agentx/config.json` (minimum):
     "enabled": true
   },
   "controlPlane": {
-    "host": "127.0.0.1",
+    "host": "0.0.0.0",
     "port": 28880,
     "users": [
       { "name": "owner", "token": "cp_admin_token_xxx", "role": "admin" }
@@ -127,7 +127,7 @@ agentx team submit --project demo "your goal"
 agentx team tasks --project demo
 agentx team board --project demo
 agentx team events --project demo --limit 50
-agentx controlplane --host 127.0.0.1 --port 28880
+agentx controlplane --host 0.0.0.0 --port 28880
 ```
 
 ## Control-plane API
