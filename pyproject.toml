@@ -1,11 +1,11 @@
 [project]
-name = "nanobot-ai"
+name = "agentx-ai"
 version = "0.1.4.post2"
 description = "A lightweight personal AI assistant framework"
 requires-python = ">=3.11"
 license = {text = "MIT"}
 authors = [
-    {name = "nanobot contributors"}
+    {name = "agentx contributors"}
 ]
 keywords = ["ai", "agent", "chatbot"]
 classifiers = [
@@ -57,37 +57,37 @@ dev = [
 ]
 
 [project.scripts]
-nanobot = "nanobot.cli.commands:app"
+agentx = "agentx.cli.commands:app"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["nanobot"]
+packages = ["agentx"]
 
 [tool.hatch.build.targets.wheel.sources]
-"nanobot" = "nanobot"
+"agentx" = "agentx"
 
 # Include non-Python files in skills and templates
 [tool.hatch.build]
 include = [
-    "nanobot/**/*.py",
-    "nanobot/templates/**/*.md",
-    "nanobot/skills/**/*.md",
-    "nanobot/skills/**/*.sh",
+    "agentx/**/*.py",
+    "agentx/templates/**/*.md",
+    "agentx/skills/**/*.md",
+    "agentx/skills/**/*.sh",
 ]
 
 [tool.hatch.build.targets.sdist]
 include = [
-    "nanobot/",
+    "agentx/",
     "bridge/",
     "README.md",
     "LICENSE",
 ]
 
 [tool.hatch.build.targets.wheel.force-include]
-"bridge" = "nanobot/bridge"
+"bridge" = "agentx/bridge"
 
 [tool.ruff]
 line-length = 100

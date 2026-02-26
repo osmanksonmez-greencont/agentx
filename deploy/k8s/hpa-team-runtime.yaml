@@ -1,12 +1,12 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: nanobot-team-runtime-hpa
+  name: agentx-team-runtime-hpa
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: nanobot-team-runtime
+    name: agentx-team-runtime
   minReplicas: 2
   maxReplicas: 8
   metrics:

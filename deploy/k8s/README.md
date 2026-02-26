@@ -14,7 +14,7 @@ kubectl apply -f deploy/k8s/hpa-team-runtime.yaml
 Expose the control-plane service via ingress or port-forward:
 
 ```bash
-kubectl port-forward service/nanobot-controlplane 18880:80
+kubectl port-forward service/agentx-controlplane 28880:80
 ```
 
-Then open: `http://127.0.0.1:18880/panel`
+Then open: `http://127.0.0.1:28880/panel`

@@ -1,6 +1,6 @@
 # AgentX
 
-AgentX is a 24/7 multi-agent AI software engineering system built from the nanobot base.
+AgentX is a 24/7 multi-agent AI software engineering system built from the agentx base.
 
 It provides:
 - A main agent entrypoint (Telegram-ready)
@@ -28,7 +28,7 @@ It provides:
 ## Project Structure
 
 ```text
-nanobot/
+agentx/
   agent/                 Core agent loop and tools
     tools/
       self_edit.py       Self-edit guardrail tool
@@ -70,10 +70,10 @@ cd agentX
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e .
-nanobot onboard
+agentx onboard
 ```
 
-Configure `~/.nanobot/config.json` (minimum):
+Configure `~/.agentx/config.json` (minimum):
 
 ```json
 {
@@ -91,7 +91,7 @@ Configure `~/.nanobot/config.json` (minimum):
   },
   "controlPlane": {
     "host": "127.0.0.1",
-    "port": 18880,
+    "port": 28880,
     "users": [
       { "name": "owner", "token": "cp_admin_token_xxx", "role": "admin" }
     ]
@@ -103,31 +103,31 @@ Start runtime + control plane:
 
 ```bash
 # terminal 1
-nanobot team run --project demo
+agentx team run --project demo
 
 # terminal 2
-nanobot controlplane
+agentx controlplane
 ```
 
 Submit work:
 
 ```bash
-nanobot team submit --project demo "Build a todo API and web app"
+agentx team submit --project demo "Build a todo API and web app"
 ```
 
 Open panel:
-- http://127.0.0.1:18880/panel
+- http://127.0.0.1:28880/panel
 - Enter control-plane token in the UI
 
 ## Core Commands
 
 ```bash
-nanobot team run --project demo
-nanobot team submit --project demo "your goal"
-nanobot team tasks --project demo
-nanobot team board --project demo
-nanobot team events --project demo --limit 50
-nanobot controlplane --host 127.0.0.1 --port 18880
+agentx team run --project demo
+agentx team submit --project demo "your goal"
+agentx team tasks --project demo
+agentx team board --project demo
+agentx team events --project demo --limit 50
+agentx controlplane --host 127.0.0.1 --port 28880
 ```
 
 ## Control-plane API
@@ -166,8 +166,8 @@ Auth methods:
 Backup and restore:
 
 ```bash
-nanobot team backup
-nanobot team restore /path/to/backup.tar.gz
+agentx team backup
+agentx team restore /path/to/backup.tar.gz
 ```
 
 Smoke checks:

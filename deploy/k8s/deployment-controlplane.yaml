@@ -1,40 +1,40 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: nanobot-controlplane
+  name: agentx-controlplane
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: nanobot-controlplane
+      app: agentx-controlplane
   template:
     metadata:
       labels:
-        app: nanobot-controlplane
+        app: agentx-controlplane
     spec:
       containers:
         - name: controlplane
-          image: nanobot:latest
+          image: agentx:latest
           imagePullPolicy: IfNotPresent
-          command: ["nanobot", "controlplane", "--host", "0.0.0.0", "--port", "18880"]
+          command: ["agentx", "controlplane", "--host", "0.0.0.0", "--port", "28880"]
           ports:
-            - containerPort: 18880
+            - containerPort: 28880
           volumeMounts:
-            - name: nanobot-data
-              mountPath: /root/.nanobot
+            - name: agentx-data
+              mountPath: /root/.agentx
           readinessProbe:
             httpGet:
               path: /api/health
-              port: 18880
+              port: 28880
             initialDelaySeconds: 5
             periodSeconds: 15
           livenessProbe:
             httpGet:
               path: /api/health
-              port: 18880
+              port: 28880
             initialDelaySeconds: 15
             periodSeconds: 20
       volumes:
-        - name: nanobot-data
+        - name: agentx-data
           persistentVolumeClaim:
-            claimName: nanobot-data-pvc
+            claimName: agentx-data-pvc

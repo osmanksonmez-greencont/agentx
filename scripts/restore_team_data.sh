@@ -12,15 +12,15 @@ trap 'rm -rf "$TMPDIR"' EXIT
 
 tar -xzf "$ARCHIVE" -C "$TMPDIR"
 
-mkdir -p "$HOME/.nanobot/data/team" "$HOME/.nanobot/data/cron" "$HOME/.nanobot"
+mkdir -p "$HOME/.agentx/data/team" "$HOME/.agentx/data/cron" "$HOME/.agentx"
 
-[ -f "$TMPDIR/config.json" ] && cp -f "$TMPDIR/config.json" "$HOME/.nanobot/config.json"
-[ -f "$TMPDIR/queue.db" ] && cp -f "$TMPDIR/queue.db" "$HOME/.nanobot/data/team/queue.db"
-[ -f "$TMPDIR/jobs.json" ] && cp -f "$TMPDIR/jobs.json" "$HOME/.nanobot/data/cron/jobs.json"
+[ -f "$TMPDIR/config.json" ] && cp -f "$TMPDIR/config.json" "$HOME/.agentx/config.json"
+[ -f "$TMPDIR/queue.db" ] && cp -f "$TMPDIR/queue.db" "$HOME/.agentx/data/team/queue.db"
+[ -f "$TMPDIR/jobs.json" ] && cp -f "$TMPDIR/jobs.json" "$HOME/.agentx/data/cron/jobs.json"
 
 if [ -d "$TMPDIR/workspace" ]; then
-  rm -rf "$HOME/.nanobot/workspace"
-  cp -a "$TMPDIR/workspace" "$HOME/.nanobot/workspace"
+  rm -rf "$HOME/.agentx/workspace"
+  cp -a "$TMPDIR/workspace" "$HOME/.agentx/workspace"
 fi
 
 echo "Restore completed from: $ARCHIVE"

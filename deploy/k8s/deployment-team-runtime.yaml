@@ -1,36 +1,36 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: nanobot-team-runtime
+  name: agentx-team-runtime
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: nanobot-team-runtime
+      app: agentx-team-runtime
   template:
     metadata:
       labels:
-        app: nanobot-team-runtime
+        app: agentx-team-runtime
     spec:
       containers:
-        - name: nanobot
-          image: nanobot:latest
+        - name: agentx
+          image: agentx:latest
           imagePullPolicy: IfNotPresent
-          command: ["nanobot", "team", "run", "--project", "default"]
+          command: ["agentx", "team", "run", "--project", "default"]
           envFrom:
             - configMapRef:
-                name: nanobot-config
+                name: agentx-config
           volumeMounts:
-            - name: nanobot-data
-              mountPath: /root/.nanobot
+            - name: agentx-data
+              mountPath: /root/.agentx
           readinessProbe:
             exec:
-              command: ["sh", "-lc", "test -f /root/.nanobot/config.json || exit 1"]
+              command: ["sh", "-lc", "test -f /root/.agentx/config.json || exit 1"]
             initialDelaySeconds: 10
             periodSeconds: 20
           livenessProbe:
             exec:
-              command: ["sh", "-lc", "ps aux | grep 'nanobot team run' | grep -v grep"]
+              command: ["sh", "-lc", "ps aux | grep 'agentx team run' | grep -v grep"]
             initialDelaySeconds: 30
             periodSeconds: 30
           resources:
@@ -41,6 +41,6 @@ spec:
               cpu: "2"
               memory: "2Gi"
       volumes:
-        - name: nanobot-data
+        - name: agentx-data
           persistentVolumeClaim:
-            claimName: nanobot-data-pvc
+            claimName: agentx-data-pvc

@@ -1,7 +1,7 @@
 # Project Status: Multi-Agent AI Development System
 
 Date: February 26, 2026
-Base repository: `HKUDS/nanobot`
+Base repository: `HKUDS/agentx`
 
 ## 1. Goal
 Build a 24/7 multi-agent software engineering system where:
@@ -12,7 +12,7 @@ Build a 24/7 multi-agent software engineering system where:
 - Main agent can safely self-modify code when needed
 
 ## 2. What We Are Doing (Implementation Direction)
-We are extending `nanobot` in phases:
+We are extending `agentx` in phases:
 1. Phase 1: Core team runtime and safety foundations
 2. Phase 2: Management API + board/task persistence and activity streams
 3. Phase 3: Web management panel (Activity + Kanban)
@@ -33,10 +33,10 @@ Status: **Baseline implementation delivered across all 5 phases**
 - Added persistent team store for projects/tasks/events/board state
 - Added task status transitions (`ready -> in_progress -> review/done`, and `failed`)
 - Added CLI inspection views for persisted state:
-  - `nanobot team tasks`
-  - `nanobot team board`
-  - `nanobot team events` (store-backed)
-- Added control-plane HTTP API server (`nanobot controlplane`)
+  - `agentx team tasks`
+  - `agentx team board`
+  - `agentx team events` (store-backed)
+- Added control-plane HTTP API server (`agentx controlplane`)
 - Added web management panel (`/panel`) with tabs for activity, board, usage, schedules, terminal, config
 - Added terminal session service (create/write/read/stop) with audit logs
 - Added audit log persistence and API
@@ -44,11 +44,11 @@ Status: **Baseline implementation delivered across all 5 phases**
 - Added queue dead-letter archival and DLQ API
 - Wired team orchestration and self-edit tools into gateway/agent runtime
 - Added new CLI commands:
-  - `nanobot team run`
-  - `nanobot team submit`
-  - `nanobot team events`
-  - `nanobot team tasks`
-  - `nanobot team board`
+  - `agentx team run`
+  - `agentx team submit`
+  - `agentx team events`
+  - `agentx team tasks`
+  - `agentx team board`
 - Added technical usage docs in `MULTI_AGENT_TEAM.md`
 - README updated with multi-agent runtime section
 
@@ -98,25 +98,25 @@ Status: **Baseline implementation delivered across all 5 phases**
 - [x] Multi-instance orchestration and autoscaling baseline (k8s manifests + HPA)
 
 ## 5. Code Areas Already Added/Changed
-- `nanobot/config/schema.py`
-- `nanobot/agent/loop.py`
-- `nanobot/agent/tools/self_edit.py`
-- `nanobot/agent/tools/team.py`
-- `nanobot/team/queue.py`
-- `nanobot/team/types.py`
-- `nanobot/team/orchestrator.py`
-- `nanobot/team/worker.py`
-- `nanobot/team/runtime.py`
-- `nanobot/team/store.py`
-- `nanobot/controlplane/server.py`
-- `nanobot/controlplane/terminal.py`
-- `nanobot/controlplane/static/index.html`
-- `nanobot/controlplane/static/style.css`
-- `nanobot/controlplane/static/app.js`
+- `agentx/config/schema.py`
+- `agentx/agent/loop.py`
+- `agentx/agent/tools/self_edit.py`
+- `agentx/agent/tools/team.py`
+- `agentx/team/queue.py`
+- `agentx/team/types.py`
+- `agentx/team/orchestrator.py`
+- `agentx/team/worker.py`
+- `agentx/team/runtime.py`
+- `agentx/team/store.py`
+- `agentx/controlplane/server.py`
+- `agentx/controlplane/terminal.py`
+- `agentx/controlplane/static/index.html`
+- `agentx/controlplane/static/style.css`
+- `agentx/controlplane/static/app.js`
 - `scripts/backup_team_data.sh`
 - `scripts/restore_team_data.sh`
 - `deploy/k8s/*`
-- `nanobot/cli/commands.py`
+- `agentx/cli/commands.py`
 - `README.md`
 - `MULTI_AGENT_TEAM.md`
 

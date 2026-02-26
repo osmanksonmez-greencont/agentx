@@ -5,7 +5,7 @@ REPO_URL="${AGENTX_REPO_URL:-https://github.com/osmanksonmez-greencont/agentx.gi
 REPO_DIR="${AGENTX_REPO_DIR:-$HOME/agentX}"
 PROJECT_ID="${AGENTX_PROJECT_ID:-default}"
 CONTROLPLANE_HOST="${AGENTX_CONTROLPLANE_HOST:-127.0.0.1}"
-CONTROLPLANE_PORT="${AGENTX_CONTROLPLANE_PORT:-18880}"
+CONTROLPLANE_PORT="${AGENTX_CONTROLPLANE_PORT:-28880}"
 
 say() {
   printf '%s\n' "$*"
@@ -36,7 +36,7 @@ ask_yes_no() {
 }
 
 ensure_repo() {
-  if [ -f "./pyproject.toml" ] && [ -d "./nanobot" ]; then
+  if [ -f "./pyproject.toml" ] && [ -d "./agentx" ]; then
     REPO_DIR="$(pwd)"
     say "Using existing repo: $REPO_DIR"
     return
@@ -61,11 +61,11 @@ setup_python() {
   . "$REPO_DIR/.venv/bin/activate"
   pip install -e "$REPO_DIR"
 
-  if [ ! -f "$HOME/.nanobot/config.json" ]; then
-    say "Creating default nanobot config"
-    nanobot onboard
+  if [ ! -f "$HOME/.agentx/config.json" ]; then
+    say "Creating default agentx config"
+    agentx onboard
   else
-    say "Config already exists at ~/.nanobot/config.json (skipping onboard)"
+    say "Config already exists at ~/.agentx/config.json (skipping onboard)"
   fi
 }
 
@@ -85,7 +85,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=$REPO_DIR
-ExecStart=/bin/sh -lc '. "$REPO_DIR/.venv/bin/activate" && nanobot team run --project "$PROJECT_ID"'
+ExecStart=/bin/sh -lc '. "$REPO_DIR/.venv/bin/activate" && agentx team run --project "$PROJECT_ID"'
 Restart=always
 RestartSec=5
 
@@ -102,7 +102,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=$REPO_DIR
-ExecStart=/bin/sh -lc '. "$REPO_DIR/.venv/bin/activate" && nanobot controlplane --host "$CONTROLPLANE_HOST" --port "$CONTROLPLANE_PORT"'
+ExecStart=/bin/sh -lc '. "$REPO_DIR/.venv/bin/activate" && agentx controlplane --host "$CONTROLPLANE_HOST" --port "$CONTROLPLANE_PORT"'
 Restart=always
 RestartSec=5
 
@@ -128,8 +128,8 @@ SERVICE
 
 run_now() {
   say "To run manually now:"
-  say "  1) cd $REPO_DIR && . .venv/bin/activate && nanobot team run --project $PROJECT_ID"
-  say "  2) cd $REPO_DIR && . .venv/bin/activate && nanobot controlplane --host $CONTROLPLANE_HOST --port $CONTROLPLANE_PORT"
+  say "  1) cd $REPO_DIR && . .venv/bin/activate && agentx team run --project $PROJECT_ID"
+  say "  2) cd $REPO_DIR && . .venv/bin/activate && agentx controlplane --host $CONTROLPLANE_HOST --port $CONTROLPLANE_PORT"
 }
 
 main() {

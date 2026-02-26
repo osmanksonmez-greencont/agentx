@@ -30,26 +30,26 @@ It will ask whether to install and auto-start systemd user services.
 
 ```bash
 # Start worker runtime (runs until stopped)
-nanobot team run --project agentx
+agentx team run --project agentx
 
 # Start worker runtime and submit a goal immediately
-nanobot team run --project agentx --goal "Build a multi-agent coding platform"
+agentx team run --project agentx --goal "Build a multi-agent coding platform"
 
 # Submit a goal without starting workers
-nanobot team submit --project agentx "Build a multi-agent coding platform"
+agentx team submit --project agentx "Build a multi-agent coding platform"
 
 # Inspect persisted state
-nanobot team tasks --project agentx
-nanobot team board --project agentx
-nanobot team events --project agentx --limit 30
+agentx team tasks --project agentx
+agentx team board --project agentx
+agentx team events --project agentx --limit 30
 
 # Start management API + web panel
-nanobot controlplane --host 127.0.0.1 --port 18880
-# open http://127.0.0.1:18880/panel
+agentx controlplane --host 127.0.0.1 --port 28880
+# open http://127.0.0.1:28880/panel
 
 # Backup/restore
-nanobot team backup
-nanobot team restore ~/.nanobot/backups/nanobot-backup-YYYYMMDD-HHMMSS.tar.gz
+agentx team backup
+agentx team restore ~/.agentx/backups/agentx-backup-YYYYMMDD-HHMMSS.tar.gz
 ```
 
 ## Control-plane API (baseline)
@@ -105,7 +105,7 @@ Roles:
 - Worker activity heartbeats and task lifecycle persisted in `team_agents` / `team_events`.
 - Usage is recorded with estimated token accounting per completed task.
 
-## Config additions (`~/.nanobot/config.json`)
+## Config additions (`~/.agentx/config.json`)
 
 ```json
 {
@@ -113,7 +113,7 @@ Roles:
     "enabled": true,
     "queue": {
       "backend": "sqlite",
-      "sqlitePath": "~/.nanobot/data/team/queue.db",
+      "sqlitePath": "~/.agentx/data/team/queue.db",
       "visibilityTimeoutS": 120,
       "retryDelayS": 10,
       "maxAttempts": 3
@@ -122,10 +122,10 @@ Roles:
   "tools": {
     "selfEdit": {
       "enabled": true,
-      "allowedPaths": ["nanobot", "tests", "README.md"],
+      "allowedPaths": ["agentx", "tests", "README.md"],
       "protectedPaths": [".git", ".env", "secrets", "docker-compose.yml"],
       "requireValidation": true,
-      "lintCommand": "ruff check nanobot tests",
+      "lintCommand": "ruff check agentx tests",
       "testCommand": "pytest -q",
       "validationTimeoutS": 300
     }
