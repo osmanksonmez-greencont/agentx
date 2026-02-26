@@ -4,6 +4,7 @@ set -eu
 REPO_URL="${AGENTX_REPO_URL:-https://github.com/osmanksonmez-greencont/agentx.git}"
 REPO_DIR="${AGENTX_REPO_DIR:-$HOME/agentX}"
 PROJECT_ID="${AGENTX_PROJECT_ID:-default}"
+GATEWAY_PORT="${AGENTX_GATEWAY_PORT:-28790}"
 CONTROLPLANE_HOST="${AGENTX_CONTROLPLANE_HOST:-127.0.0.1}"
 CONTROLPLANE_PORT="${AGENTX_CONTROLPLANE_PORT:-28880}"
 
@@ -75,6 +76,7 @@ install_services() {
 
   TEAM_SERVICE="$USER_SYSTEMD_DIR/agentx-team.service"
   CP_SERVICE="$USER_SYSTEMD_DIR/agentx-controlplane.service"
+  GW_SERVICE="$USER_SYSTEMD_DIR/agentx-gateway.service"
 
   cat > "$TEAM_SERVICE" <<SERVICE
 [Unit]
@@ -110,9 +112,27 @@ RestartSec=5
 WantedBy=default.target
 SERVICE
 
+  cat > "$GW_SERVICE" <<SERVICE
+[Unit]
+Description=AgentX Gateway
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=$REPO_DIR
+ExecStart=/bin/sh -lc '. "$REPO_DIR/.venv/bin/activate" && agentx gateway --port "$GATEWAY_PORT"'
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
+SERVICE
+
   systemctl --user daemon-reload
   systemctl --user enable --now agentx-team.service
   systemctl --user enable --now agentx-controlplane.service
+  systemctl --user enable --now agentx-gateway.service
 
   if ask_yes_no "Enable lingering so services keep running after logout?" yes; then
     if command -v loginctl >/dev/null 2>&1; then
@@ -123,13 +143,16 @@ SERVICE
   say "Services installed and started:"
   say "  - agentx-team.service"
   say "  - agentx-controlplane.service"
+  say "  - agentx-gateway.service"
   say "Panel URL: http://$CONTROLPLANE_HOST:$CONTROLPLANE_PORT/panel"
+  say "Gateway URL: http://$CONTROLPLANE_HOST:$GATEWAY_PORT"
 }
 
 run_now() {
   say "To run manually now:"
   say "  1) cd $REPO_DIR && . .venv/bin/activate && agentx team run --project $PROJECT_ID"
   say "  2) cd $REPO_DIR && . .venv/bin/activate && agentx controlplane --host $CONTROLPLANE_HOST --port $CONTROLPLANE_PORT"
+  say "  3) cd $REPO_DIR && . .venv/bin/activate && agentx gateway --port $GATEWAY_PORT"
 }
 
 main() {
