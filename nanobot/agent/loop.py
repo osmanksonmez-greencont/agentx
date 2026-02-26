@@ -27,7 +27,7 @@ from nanobot.providers.base import LLMProvider
 from nanobot.session.manager import Session, SessionManager
 
 if TYPE_CHECKING:
-    from nanobot.config.schema import ChannelsConfig, ExecToolConfig
+    from nanobot.config.schema import ChannelsConfig, ExecToolConfig, SelfEditConfig
     from nanobot.cron.service import CronService
 
 
@@ -60,6 +60,9 @@ class AgentLoop:
         session_manager: SessionManager | None = None,
         mcp_servers: dict | None = None,
         channels_config: ChannelsConfig | None = None,
+        self_edit_config: SelfEditConfig | None = None,
+        team_orchestrator: Any | None = None,
+        team_store: Any | None = None,
     ):
         from nanobot.config.schema import ExecToolConfig
         self.bus = bus
@@ -92,6 +95,10 @@ class AgentLoop:
         )
 
         self._running = False
+        self.self_edit_config = self_edit_config
+        self.team_orchestrator = team_orchestrator
+        self.team_store = team_store
+        self.last_run_usage: dict[str, int] = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
         self._mcp_servers = mcp_servers or {}
         self._mcp_stack: AsyncExitStack | None = None
         self._mcp_connected = False
@@ -118,6 +125,23 @@ class AgentLoop:
         self.tools.register(WebFetchTool())
         self.tools.register(MessageTool(send_callback=self.bus.publish_outbound))
         self.tools.register(SpawnTool(manager=self.subagents))
+        if self.team_orchestrator:
+            from nanobot.agent.tools.team import TeamSubmitGoalTool
+            self.tools.register(
+                TeamSubmitGoalTool(
+                    orchestrator=self.team_orchestrator,
+                    audit_callback=(self.team_store.append_audit_log if self.team_store else None),
+                )
+            )
+        if self.self_edit_config and self.self_edit_config.enabled:
+            from nanobot.agent.tools.self_edit import SelfEditGuardTool
+            self.tools.register(
+                SelfEditGuardTool(
+                    workspace=self.workspace,
+                    config=self.self_edit_config,
+                    audit_callback=(self.team_store.append_audit_log if self.team_store else None),
+                )
+            )
         if self.cron_service:
             self.tools.register(CronTool(self.cron_service))
 
@@ -184,6 +208,7 @@ class AgentLoop:
         iteration = 0
         final_content = None
         tools_used: list[str] = []
+        usage_acc = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
 
         while iteration < self.max_iterations:
             iteration += 1
@@ -195,6 +220,10 @@ class AgentLoop:
                 temperature=self.temperature,
                 max_tokens=self.max_tokens,
             )
+            if response.usage:
+                usage_acc["prompt_tokens"] += int(response.usage.get("prompt_tokens", 0))
+                usage_acc["completion_tokens"] += int(response.usage.get("completion_tokens", 0))
+                usage_acc["total_tokens"] += int(response.usage.get("total_tokens", 0))
 
             if response.has_tool_calls:
                 if on_progress:
@@ -242,6 +271,7 @@ class AgentLoop:
                 "without completing the task. You can try breaking the task into smaller steps."
             )
 
+        self.last_run_usage = usage_acc
         return final_content, tools_used, messages
 
     async def run(self) -> None:

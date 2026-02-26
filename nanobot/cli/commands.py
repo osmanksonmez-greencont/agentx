@@ -296,6 +296,16 @@ def gateway(
     config = load_config()
     bus = MessageBus()
     provider = _make_provider(config)
+    team_orchestrator = None
+    team_store = None
+    if config.team.enabled:
+        from nanobot.team.orchestrator import TeamOrchestrator
+        from nanobot.team.runtime import TeamRuntime
+        team_store = TeamRuntime.make_store(config)
+        team_orchestrator = TeamOrchestrator(
+            queue=TeamRuntime.make_queue(config),
+            store=team_store,
+        )
     session_manager = SessionManager(config.workspace_path)
     
     # Create cron service first (callback set after agent creation)
@@ -319,6 +329,9 @@ def gateway(
         session_manager=session_manager,
         mcp_servers=config.tools.mcp_servers,
         channels_config=config.channels,
+        self_edit_config=config.tools.self_edit,
+        team_orchestrator=team_orchestrator,
+        team_store=team_store,
     )
     
     # Set cron callback (needs agent)
@@ -450,6 +463,16 @@ def agent(
     
     bus = MessageBus()
     provider = _make_provider(config)
+    team_orchestrator = None
+    team_store = None
+    if config.team.enabled:
+        from nanobot.team.orchestrator import TeamOrchestrator
+        from nanobot.team.runtime import TeamRuntime
+        team_store = TeamRuntime.make_store(config)
+        team_orchestrator = TeamOrchestrator(
+            queue=TeamRuntime.make_queue(config),
+            store=team_store,
+        )
 
     # Create cron service for tool usage (no callback needed for CLI unless running)
     cron_store_path = get_data_dir() / "cron" / "jobs.json"
@@ -475,6 +498,9 @@ def agent(
         restrict_to_workspace=config.tools.restrict_to_workspace,
         mcp_servers=config.tools.mcp_servers,
         channels_config=config.channels,
+        self_edit_config=config.tools.self_edit,
+        team_orchestrator=team_orchestrator,
+        team_store=team_store,
     )
     
     # Show spinner when logs are off (no output to miss); skip when logs are on
@@ -951,6 +977,16 @@ def cron_run(
     config = load_config()
     provider = _make_provider(config)
     bus = MessageBus()
+    team_orchestrator = None
+    team_store = None
+    if config.team.enabled:
+        from nanobot.team.orchestrator import TeamOrchestrator
+        from nanobot.team.runtime import TeamRuntime
+        team_store = TeamRuntime.make_store(config)
+        team_orchestrator = TeamOrchestrator(
+            queue=TeamRuntime.make_queue(config),
+            store=team_store,
+        )
     agent_loop = AgentLoop(
         bus=bus,
         provider=provider,
@@ -965,6 +1001,9 @@ def cron_run(
         restrict_to_workspace=config.tools.restrict_to_workspace,
         mcp_servers=config.tools.mcp_servers,
         channels_config=config.channels,
+        self_edit_config=config.tools.self_edit,
+        team_orchestrator=team_orchestrator,
+        team_store=team_store,
     )
 
     store_path = get_data_dir() / "cron" / "jobs.json"
@@ -993,6 +1032,264 @@ def cron_run(
             _print_agent_response(result_holder[0], render_markdown=True)
     else:
         console.print(f"[red]Failed to run job {job_id}[/red]")
+
+
+# ============================================================================
+# Team Commands
+# ============================================================================
+
+@app.command("controlplane")
+def controlplane(
+    host: str = typer.Option("127.0.0.1", "--host", help="Control-plane bind host"),
+    port: int = typer.Option(18880, "--port", "-p", help="Control-plane port"),
+):
+    """Run management API + panel."""
+    from nanobot.config.loader import load_config
+    from nanobot.controlplane.server import serve_control_plane
+
+    cfg = load_config()
+    if host == "127.0.0.1":
+        host = cfg.control_plane.host
+    if port == 18880:
+        port = cfg.control_plane.port
+
+    console.print(f"{__logo__} Starting control-plane at http://{host}:{port}/panel")
+    serve_control_plane(host=host, port=port)
+
+
+team_app = typer.Typer(help="Manage multi-agent team runtime")
+app.add_typer(team_app, name="team")
+
+
+@team_app.command("run")
+def team_run(
+    project_id: str = typer.Option("default", "--project", "-p", help="Project ID"),
+    goal: str = typer.Option("", "--goal", "-g", help="Optional goal to submit on startup"),
+):
+    """Run concurrent team workers and optional initial goal submission."""
+    from nanobot.config.loader import load_config
+    from nanobot.team.runtime import TeamRuntime
+
+    config = load_config()
+    provider = _make_provider(config)
+    queue = TeamRuntime.make_queue(config)
+    runtime = TeamRuntime(config=config, provider=provider, queue=queue)
+
+    console.print(f"{__logo__} Starting team runtime")
+    console.print(f"Queue backend: {config.team.queue.backend}")
+    console.print(f"Project: {project_id}")
+    if goal:
+        console.print("[green]✓[/green] Submitting initial goal")
+
+    asyncio.run(runtime.run(project_id=project_id if goal else None, goal=goal or None))
+
+
+@team_app.command("submit")
+def team_submit(
+    goal: str = typer.Argument(..., help="Top-level product/software goal"),
+    project_id: str = typer.Option("default", "--project", "-p", help="Project ID"),
+    source: str = typer.Option("cli", "--source", help="Goal source label"),
+):
+    """Submit a goal to the orchestrator and enqueue role-assigned tasks."""
+    from nanobot.config.loader import load_config
+    from nanobot.team.runtime import TeamRuntime
+    from nanobot.team.orchestrator import TeamOrchestrator
+
+    config = load_config()
+    queue = TeamRuntime.make_queue(config)
+    orchestrator = TeamOrchestrator(
+        queue=queue,
+        store=TeamRuntime.make_store(config),
+    )
+
+    async def _submit():
+        return await orchestrator.submit_goal(project_id=project_id, goal=goal, source=source)
+
+    tasks = asyncio.run(_submit())
+    console.print(f"[green]✓[/green] Submitted goal to project '{project_id}'")
+    for t in tasks:
+        console.print(f"  - [{t.assignee_role}] {t.title} ({t.id})")
+
+
+@team_app.command("events")
+def team_events(
+    project_id: str = typer.Option("default", "--project", "-p", help="Project ID"),
+    limit: int = typer.Option(20, "--limit", "-n", help="Number of events"),
+):
+    """Show recent persisted team events."""
+    from nanobot.config.loader import load_config
+    from nanobot.team.runtime import TeamRuntime
+
+    config = load_config()
+    store = TeamRuntime.make_store(config)
+    rows = store.list_events(project_id=project_id, limit=limit)
+    if not rows:
+        console.print("[yellow]No events found.[/yellow]")
+        return
+
+    table = Table(title="Team Events")
+    table.add_column("ID", style="cyan")
+    table.add_column("Created", style="dim")
+    table.add_column("Kind", style="green")
+    table.add_column("Task", style="magenta")
+    table.add_column("Role", style="yellow")
+    table.add_column("Message", style="white")
+
+    for r in rows:
+        table.add_row(
+            str(r.get("id", "")),
+            str(r.get("createdAt", "")),
+            str(r.get("kind", "")),
+            str(r.get("taskId", "")),
+            str(r.get("assigneeRole", "")),
+            str(r.get("message", ""))[:80],
+        )
+
+    console.print(table)
+
+
+@team_app.command("tasks")
+def team_tasks(
+    project_id: str = typer.Option("default", "--project", "-p", help="Project ID"),
+    status: str = typer.Option("", "--status", "-s", help="Filter by status"),
+):
+    """Show persisted tasks for a project."""
+    from nanobot.config.loader import load_config
+    from nanobot.team.runtime import TeamRuntime
+
+    config = load_config()
+    store = TeamRuntime.make_store(config)
+    rows = store.list_tasks(project_id=project_id, status=status or None)
+    if not rows:
+        console.print("[yellow]No tasks found.[/yellow]")
+        return
+
+    table = Table(title=f"Team Tasks ({project_id})")
+    table.add_column("ID", style="cyan")
+    table.add_column("Role", style="yellow")
+    table.add_column("Status", style="green")
+    table.add_column("Title", style="white")
+    table.add_column("Updated", style="dim")
+    for r in rows:
+        table.add_row(
+            str(r.get("id", "")),
+            str(r.get("assigneeRole", "")),
+            str(r.get("status", "")),
+            str(r.get("title", ""))[:70],
+            str(r.get("updatedAt", "")),
+        )
+    console.print(table)
+
+
+@team_app.command("board")
+def team_board(
+    project_id: str = typer.Option("default", "--project", "-p", help="Project ID"),
+):
+    """Show a text view of the Kanban board state."""
+    from nanobot.config.loader import load_config
+    from nanobot.team.runtime import TeamRuntime
+
+    config = load_config()
+    store = TeamRuntime.make_store(config)
+    board = store.list_board(project_id=project_id)
+    if not board:
+        console.print("[yellow]No board data found.[/yellow]")
+        return
+
+    for column_name, cards in board.items():
+        console.print(f"\n[bold cyan]{column_name}[/bold cyan] ({len(cards)})")
+        if not cards:
+            console.print("  [dim]- empty[/dim]")
+            continue
+        for c in cards:
+            console.print(
+                f"  - [{c.get('assigneeRole', '')}] {c.get('title', '')} "
+                f"({c.get('id', '')}, {c.get('status', '')})"
+            )
+
+
+@team_app.command("backup")
+def team_backup(
+    output: str = typer.Option("", "--output", "-o", help="Backup archive path (.tar.gz)"),
+):
+    """Create a backup for config, queue db, cron jobs, and workspace."""
+    import tarfile
+    import tempfile
+    import shutil
+    from datetime import datetime
+    from nanobot.config.loader import get_config_path, get_data_dir, load_config
+
+    cfg = load_config()
+    stamp = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+    dest = Path(output).expanduser() if output else (Path.home() / ".nanobot" / "backups" / f"nanobot-backup-{stamp}.tar.gz")
+    dest.parent.mkdir(parents=True, exist_ok=True)
+
+    with tempfile.TemporaryDirectory() as td:
+        tmp = Path(td)
+        config_path = get_config_path()
+        queue_path = get_data_dir() / "team" / "queue.db"
+        cron_jobs = get_data_dir() / "cron" / "jobs.json"
+        if config_path.exists():
+            shutil.copy2(config_path, tmp / "config.json")
+        if queue_path.exists():
+            shutil.copy2(queue_path, tmp / "queue.db")
+        if cron_jobs.exists():
+            (tmp / "cron").mkdir(parents=True, exist_ok=True)
+            shutil.copy2(cron_jobs, tmp / "cron" / "jobs.json")
+        if cfg.workspace_path.exists():
+            shutil.copytree(cfg.workspace_path, tmp / "workspace", dirs_exist_ok=True)
+
+        with tarfile.open(dest, "w:gz") as tar:
+            for item in tmp.iterdir():
+                tar.add(item, arcname=item.name)
+
+    console.print(f"[green]✓[/green] Backup created at {dest}")
+
+
+@team_app.command("restore")
+def team_restore(
+    archive: str = typer.Argument(..., help="Backup archive path (.tar.gz)"),
+):
+    """Restore backup archive into ~/.nanobot data paths."""
+    import tarfile
+    import tempfile
+    import shutil
+    from nanobot.config.loader import get_data_dir, get_config_path, load_config
+
+    src = Path(archive).expanduser()
+    if not src.exists():
+        console.print(f"[red]Backup not found:[/red] {src}")
+        raise typer.Exit(1)
+
+    with tempfile.TemporaryDirectory() as td:
+        tmp = Path(td)
+        with tarfile.open(src, "r:gz") as tar:
+            for m in tar.getmembers():
+                target = (tmp / m.name).resolve()
+                if tmp.resolve() not in target.parents and target != tmp.resolve():
+                    console.print(f"[red]Unsafe archive entry blocked:[/red] {m.name}")
+                    raise typer.Exit(1)
+            tar.extractall(tmp)
+
+        cfg_path = get_config_path()
+        data_dir = get_data_dir()
+        (data_dir / "team").mkdir(parents=True, exist_ok=True)
+        (data_dir / "cron").mkdir(parents=True, exist_ok=True)
+
+        if (tmp / "config.json").exists():
+            shutil.copy2(tmp / "config.json", cfg_path)
+        if (tmp / "queue.db").exists():
+            shutil.copy2(tmp / "queue.db", data_dir / "team" / "queue.db")
+        if (tmp / "cron" / "jobs.json").exists():
+            shutil.copy2(tmp / "cron" / "jobs.json", data_dir / "cron" / "jobs.json")
+
+        cfg = load_config()
+        if (tmp / "workspace").exists():
+            if cfg.workspace_path.exists():
+                shutil.rmtree(cfg.workspace_path)
+            shutil.copytree(tmp / "workspace", cfg.workspace_path)
+
+    console.print(f"[green]✓[/green] Restore completed from {src}")
 
 
 # ============================================================================

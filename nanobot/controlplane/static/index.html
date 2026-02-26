@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AgentX Control Plane</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/panel/style.css" />
+</head>
+<body>
+  <div class="bg-shape shape-a"></div>
+  <div class="bg-shape shape-b"></div>
+  <header>
+    <h1>AgentX Control Plane</h1>
+    <p>24/7 Multi-Agent Software Engineering Team</p>
+    <div class="row">
+      <input id="apiToken" placeholder="API token (optional)" />
+      <button id="saveToken">Save Token</button>
+    </div>
+  </header>
+
+  <nav>
+    <button data-tab="activity" class="active">Activity</button>
+    <button data-tab="board">Kanban</button>
+    <button data-tab="usage">Usage</button>
+    <button data-tab="jobs">Schedules</button>
+    <button data-tab="terminal">Terminal</button>
+    <button data-tab="config">Config</button>
+  </nav>
+
+  <main>
+    <section id="activity" class="tab active">
+      <div class="row">
+        <input id="projectId" value="default" placeholder="project id" />
+        <button id="refreshActivity">Refresh</button>
+      </div>
+      <h3>Agents</h3>
+      <pre id="agentsView"></pre>
+      <h3>Events</h3>
+      <pre id="eventsView"></pre>
+    </section>
+
+    <section id="board" class="tab">
+      <div class="row">
+        <button id="refreshBoard">Refresh Board</button>
+      </div>
+      <div id="boardView" class="board"></div>
+    </section>
+
+    <section id="usage" class="tab">
+      <button id="refreshUsage">Refresh Usage</button>
+      <pre id="usageView"></pre>
+    </section>
+
+    <section id="jobs" class="tab">
+      <button id="refreshJobs">Refresh Jobs</button>
+      <pre id="jobsView"></pre>
+    </section>
+
+    <section id="terminal" class="tab">
+      <div class="row">
+        <input id="termCommand" value="bash" />
+        <button id="createSession">Create Session</button>
+      </div>
+      <div class="row">
+        <input id="sessionId" placeholder="session id" />
+        <input id="termInput" placeholder="command (e.g. ls -la\n)" />
+        <button id="sendTerm">Send</button>
+        <button id="readTerm">Read</button>
+      </div>
+      <pre id="terminalView"></pre>
+    </section>
+
+    <section id="config" class="tab">
+      <button id="loadConfig">Load Config</button>
+      <button id="saveConfig">Save Config</button>
+      <textarea id="configEditor"></textarea>
+    </section>
+  </main>
+
+  <script src="/panel/app.js"></script>
+</body>
+</html>

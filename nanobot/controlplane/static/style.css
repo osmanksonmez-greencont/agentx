@@ -1,0 +1,96 @@
+:root {
+  --bg: #f2f0e8;
+  --panel: #fffaf0;
+  --ink: #17212f;
+  --accent: #d1403f;
+  --accent-2: #0f7a6c;
+  --line: #d3cbb8;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: "Space Grotesk", sans-serif;
+  color: var(--ink);
+  background: radial-gradient(circle at 10% 0%, #efe5c8 0, transparent 40%), var(--bg);
+}
+header {
+  padding: 24px;
+  border-bottom: 2px solid var(--line);
+  background: linear-gradient(90deg, #fffaf0, #efe6d2);
+}
+h1 { margin: 0; font-size: 32px; letter-spacing: -0.5px; }
+header p { margin: 4px 0 0; color: #415169; }
+nav {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  backdrop-filter: blur(8px);
+  background: rgba(255, 250, 240, 0.9);
+}
+button, input, textarea {
+  font-family: "IBM Plex Mono", monospace;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+}
+button {
+  padding: 8px 12px;
+  cursor: pointer;
+  border-radius: 8px;
+}
+button.active, button:hover {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+main { padding: 18px; }
+.tab { display: none; }
+.tab.active { display: block; animation: fade .25s ease; }
+.row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+input { padding: 8px; border-radius: 8px; min-width: 170px; }
+textarea {
+  width: 100%;
+  min-height: 360px;
+  padding: 10px;
+  border-radius: 10px;
+}
+pre {
+  white-space: pre-wrap;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--accent-2);
+  border-radius: 10px;
+  padding: 12px;
+}
+.board {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+.col {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px;
+}
+.col h4 { margin: 0 0 8px; }
+.card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+.bg-shape {
+  position: fixed;
+  z-index: -1;
+  border-radius: 999px;
+  opacity: .25;
+}
+.shape-a { width: 260px; height: 260px; right: -60px; top: 80px; background: #e34f4d; }
+.shape-b { width: 300px; height: 300px; left: -90px; bottom: -40px; background: #2d9e8d; }
+@keyframes fade { from { opacity: .3; transform: translateY(6px); } to { opacity: 1; transform: none; } }

@@ -1046,6 +1046,30 @@ nanobot/
 └── cli/            # 🖥️ Commands
 ```
 
+## 🧩 Multi-Agent Team Runtime (Experimental)
+
+This repo now includes a Phase-1 multi-agent software team runtime:
+
+- Role workers (`architect`, `backend`, `frontend`, `qa`) with concurrent execution
+- Durable queue backend (`sqlite`) for tasks/events
+- Main-agent tool `team_submit_goal` to enqueue goals for the team
+- Self-edit guardrail tool `self_edit_guard` (path checks + lint/test validation)
+
+Quick start:
+
+```bash
+nanobot team run --project agentx --goal "Build a multi-agent coding platform"
+nanobot team events --limit 30
+nanobot controlplane --host 127.0.0.1 --port 18880
+```
+
+For backup/recovery and Kubernetes deployment baselines, see:
+- [MULTI_AGENT_TEAM.md](MULTI_AGENT_TEAM.md)
+- `scripts/backup_team_data.sh` / `scripts/restore_team_data.sh`
+- `deploy/k8s/`
+
+Details: see [MULTI_AGENT_TEAM.md](MULTI_AGENT_TEAM.md)
+
 ## 🤝 Contribute & Roadmap
 
 PRs welcome! The codebase is intentionally small and readable. 🤗

@@ -295,6 +295,20 @@ class MCPServerConfig(Base):
     tool_timeout: int = 30  # Seconds before a tool call is cancelled
 
 
+class SelfEditConfig(Base):
+    """Self-edit guardrails for the main agent."""
+
+    enabled: bool = True
+    allowed_paths: list[str] = Field(default_factory=lambda: ["nanobot", "tests", "README.md"])
+    protected_paths: list[str] = Field(
+        default_factory=lambda: [".git", ".env", "secrets", "docker-compose.yml"]
+    )
+    require_validation: bool = True
+    lint_command: str = "ruff check nanobot tests"
+    test_command: str = "pytest -q"
+    validation_timeout_s: int = 300
+
+
 class ToolsConfig(Base):
     """Tools configuration."""
 
@@ -302,6 +316,73 @@ class ToolsConfig(Base):
     exec: ExecToolConfig = Field(default_factory=ExecToolConfig)
     restrict_to_workspace: bool = False  # If true, restrict all tool access to workspace directory
     mcp_servers: dict[str, MCPServerConfig] = Field(default_factory=dict)
+    self_edit: SelfEditConfig = Field(default_factory=SelfEditConfig)
+
+
+class TeamQueueConfig(Base):
+    """Team queue backend configuration."""
+
+    backend: Literal["sqlite", "memory"] = "sqlite"
+    sqlite_path: str = "~/.nanobot/data/team/queue.db"
+    visibility_timeout_s: int = 120
+    retry_delay_s: int = 10
+    max_attempts: int = 3
+
+
+class TeamAgentRoleConfig(Base):
+    """Worker role defaults."""
+
+    enabled: bool = True
+    model: str = ""
+    provider: str = "auto"
+    concurrency: int = 1
+
+
+class TeamConfig(Base):
+    """Multi-agent team runtime configuration."""
+
+    enabled: bool = False
+    queue: TeamQueueConfig = Field(default_factory=TeamQueueConfig)
+    roles: dict[str, TeamAgentRoleConfig] = Field(
+        default_factory=lambda: {
+            "architect": TeamAgentRoleConfig(),
+            "backend": TeamAgentRoleConfig(),
+            "frontend": TeamAgentRoleConfig(),
+            "qa": TeamAgentRoleConfig(),
+        }
+    )
+
+
+class PricingModelConfig(Base):
+    """Per-model pricing (USD per 1M tokens)."""
+
+    input_per_million: float = 0.0
+    output_per_million: float = 0.0
+
+
+class PricingConfig(Base):
+    """Model pricing catalog for usage/cost accounting."""
+
+    default_input_per_million: float = 0.0
+    default_output_per_million: float = 0.0
+    models: dict[str, PricingModelConfig] = Field(default_factory=dict)
+
+
+class ControlPlaneUser(Base):
+    """User token and role for control-plane API access."""
+
+    name: str = ""
+    token: str = ""
+    role: Literal["viewer", "operator", "admin"] = "viewer"
+
+
+class ControlPlaneConfig(Base):
+    """Control-plane server config and access control."""
+
+    enabled: bool = True
+    host: str = "127.0.0.1"
+    port: int = 18880
+    users: list[ControlPlaneUser] = Field(default_factory=list)
 
 
 class Config(BaseSettings):
@@ -312,6 +393,9 @@ class Config(BaseSettings):
     providers: ProvidersConfig = Field(default_factory=ProvidersConfig)
     gateway: GatewayConfig = Field(default_factory=GatewayConfig)
     tools: ToolsConfig = Field(default_factory=ToolsConfig)
+    team: TeamConfig = Field(default_factory=TeamConfig)
+    pricing: PricingConfig = Field(default_factory=PricingConfig)
+    control_plane: ControlPlaneConfig = Field(default_factory=ControlPlaneConfig)
 
     @property
     def workspace_path(self) -> Path:
