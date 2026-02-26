@@ -20,6 +20,14 @@ This repository now includes a first implementation of a concurrent software-eng
 
 ## CLI
 
+One-line installer/setup (local or remote):
+
+```bash
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/osmanksonmez-greencont/agentx/main/scripts/agentx_install.sh)"
+```
+
+It will ask whether to install and auto-start systemd user services.
+
 ```bash
 # Start worker runtime (runs until stopped)
 nanobot team run --project agentx

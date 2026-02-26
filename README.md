@@ -56,6 +56,14 @@ deploy/k8s/
 
 ## Quick Start
 
+One-line install + setup script:
+
+```bash
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/osmanksonmez-greencont/agentx/main/scripts/agentx_install.sh)"
+```
+
+The script asks if you want to install `systemd --user` services and run AgentX on startup.
+
 ```bash
 git clone <your-repo-url> agentX
 cd agentX
