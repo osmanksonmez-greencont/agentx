@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 import json
 from pathlib import Path
@@ -37,6 +37,8 @@ class TeamStore:
     """SQLite-backed store for control-plane state."""
 
     db_path: Path
+    _lock: threading.Lock = field(init=False, repr=False)
+    _conn: sqlite3.Connection = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         self.db_path = self.db_path.expanduser()
