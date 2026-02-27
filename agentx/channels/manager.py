@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import os
 import sqlite3
 from pathlib import Path
@@ -16,8 +15,8 @@ from agentx.bus.queue import MessageBus
 from agentx.channels.base import BaseChannel
 from agentx.config.schema import Config
 
-# Team queue monitoring
-TEAM_QUEUE_DB = os.path.expanduser("~/.agentx/data/team/queue.db")
+# Team event monitoring
+TEAM_STORE_DB = os.path.expanduser("~/.agentx/data/team/queue.db")
 TEAM_NOTIF_LAST_ID_FILE = os.path.expanduser("~/.agentx/data/team/last_notif_id.txt")
 
 
@@ -298,7 +297,7 @@ class ChannelManager:
         """Get list of enabled channel names."""
         return list(self.channels.keys())
     
-    # === Team Queue Monitoring ===
+    # === Team Event Monitoring ===
     
     def _get_last_notif_id(self) -> int:
         """Get the last notified event ID."""
@@ -317,13 +316,17 @@ class ChannelManager:
             f.write(str(event_id))
     
     def _get_latest_event_id(self) -> int:
-        """Get the latest event ID from the team queue."""
+        """Get the latest event ID from the persistent team event store."""
         try:
-            if not os.path.exists(TEAM_QUEUE_DB):
+            store_db = Path(self.config.team.queue.sqlite_path).expanduser()
+            if not store_db.exists():
+                # Backward-compatible fallback path for legacy installs.
+                store_db = Path(TEAM_STORE_DB).expanduser()
+            if not store_db.exists():
                 return 0
-            conn = sqlite3.connect(TEAM_QUEUE_DB)
+            conn = sqlite3.connect(str(store_db))
             cursor = conn.cursor()
-            cursor.execute("SELECT MAX(id) FROM queue_messages WHERE queue_name = 'team.task.events'")
+            cursor.execute("SELECT MAX(id) FROM team_events")
             result = cursor.fetchone()
             conn.close()
             return result[0] if result and result[0] else 0
@@ -332,21 +335,24 @@ class ChannelManager:
             return 0
     
     def _get_latest_event(self) -> dict | None:
-        """Get the latest team task event."""
+        """Get the latest team event from persistent store."""
         try:
-            if not os.path.exists(TEAM_QUEUE_DB):
+            store_db = Path(self.config.team.queue.sqlite_path).expanduser()
+            if not store_db.exists():
+                store_db = Path(TEAM_STORE_DB).expanduser()
+            if not store_db.exists():
                 return None
-            conn = sqlite3.connect(TEAM_QUEUE_DB)
+            conn = sqlite3.connect(str(store_db))
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT payload_json FROM queue_messages 
-                WHERE queue_name = 'team.task.events'
+                SELECT kind, message
+                FROM team_events
                 ORDER BY id DESC LIMIT 1
             """)
             result = cursor.fetchone()
             conn.close()
             if result:
-                return json.loads(result[0])
+                return {"kind": result[0], "message": result[1]}
         except Exception as e:
             logger.debug("Error getting latest event: {}", e)
         return None
@@ -401,10 +407,10 @@ class ChannelManager:
             logger.debug("Telegram not available for notification")
             return
         
-        # Get the configured chat ID from config
+        # Get the configured chat ID from config.
         chat_id = None
-        if self.config.channels.telegram.allowFrom:
-            chat_id = self.config.channels.telegram.allowFrom[0]
+        if self.config.channels.telegram.allow_from:
+            chat_id = self.config.channels.telegram.allow_from[0]
         
         if not chat_id:
             logger.warning("No Telegram chat ID configured for notifications")
