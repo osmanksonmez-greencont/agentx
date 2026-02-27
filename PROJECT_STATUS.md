@@ -24,7 +24,7 @@ Status: **Baseline implementation delivered across all 5 phases**
 
 ### 3.1 Completed
 - Added team runtime configuration schema (`team.*`) and self-edit guard config (`tools.selfEdit.*`)
-- Added durable queue backend (`sqlite`) with role-specific task queues
+- Added durable queue backends (`sqlite`, `redis`, `memory`) with role-specific task queues
 - Added orchestrator that decomposes high-level goals into role tasks
 - Added concurrent role workers (`architect`, `backend`, `frontend`, `qa`)
 - Added runtime entry to run worker pool continuously
@@ -62,6 +62,7 @@ Status: **Baseline implementation delivered across all 5 phases**
 - [x] Self-edit config schema
 - [x] Durable queue abstraction
 - [x] SQLite queue backend
+- [x] Redis queue backend
 - [x] Orchestrator goal decomposition
 - [x] Concurrent worker runtime
 - [x] Main-agent `team_submit_goal` tool

@@ -13,7 +13,7 @@ It provides:
 ## Key Features
 
 - Multi-agent runtime with role-based workers
-- Durable SQLite queue with retries and dead-letter queue
+- Durable queue backends: SQLite or Redis (with retries and dead-letter queue)
 - Persistent project/task/event/board store
 - Control-plane API for activity, board, usage, schedules, audit
 - Web management panel at `/panel`
@@ -95,6 +95,20 @@ Configure `~/.agentx/config.json` (minimum):
     "users": [
       { "name": "owner", "token": "cp_admin_token_xxx", "role": "admin" }
     ]
+  }
+}
+```
+
+Queue backend can be configured explicitly:
+
+```json
+{
+  "team": {
+    "queue": {
+      "backend": "redis",
+      "redisUrl": "redis://127.0.0.1:6379/0",
+      "redisPrefix": "agentx:team"
+    }
   }
 }
 ```

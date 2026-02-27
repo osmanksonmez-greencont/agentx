@@ -322,8 +322,10 @@ class ToolsConfig(Base):
 class TeamQueueConfig(Base):
     """Team queue backend configuration."""
 
-    backend: Literal["sqlite", "memory"] = "sqlite"
+    backend: Literal["sqlite", "memory", "redis"] = "sqlite"
     sqlite_path: str = "~/.agentx/data/team/queue.db"
+    redis_url: str = "redis://127.0.0.1:6379/0"
+    redis_prefix: str = "agentx:team"
     visibility_timeout_s: int = 120
     retry_delay_s: int = 10
     max_attempts: int = 3

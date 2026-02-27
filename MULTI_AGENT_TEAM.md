@@ -4,7 +4,7 @@ This repository now includes a first implementation of a concurrent software-eng
 
 ## Implemented
 
-- Durable task queue backend (`sqlite`) with retry + visibility timeout semantics.
+- Durable task queue backends (`sqlite`, `redis`, `memory`) with retry + visibility timeout semantics.
 - Role-based concurrent workers (`architect`, `backend`, `frontend`, `qa`).
 - Main orchestrator that decomposes top-level goals into role-assigned tasks.
 - Main-agent tool `team_submit_goal` to enqueue goals from chat.
@@ -112,8 +112,10 @@ Roles:
   "team": {
     "enabled": true,
     "queue": {
-      "backend": "sqlite",
+      "backend": "redis",
       "sqlitePath": "~/.agentx/data/team/queue.db",
+      "redisUrl": "redis://127.0.0.1:6379/0",
+      "redisPrefix": "agentx:team",
       "visibilityTimeoutS": 120,
       "retryDelayS": 10,
       "maxAttempts": 3

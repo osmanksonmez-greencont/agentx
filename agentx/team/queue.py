@@ -6,10 +6,13 @@ import asyncio
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 import json
+from pathlib import Path
 import sqlite3
 import threading
-from pathlib import Path
+import time
 from typing import Any
+
+from redis.asyncio import Redis
 
 
 QUEUE_TASK_COMMANDS = "team.task.commands"
@@ -95,6 +98,9 @@ class SQLiteTeamQueue(BaseTeamQueue):
         self._lock = threading.Lock()
         self._conn = sqlite3.connect(str(self.db_path), check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
+        self._conn.execute("PRAGMA journal_mode=WAL")
+        self._conn.execute("PRAGMA busy_timeout = 5000")
+        self._conn.execute("PRAGMA synchronous = NORMAL")
         self._init_schema()
 
     def _init_schema(self) -> None:
@@ -241,3 +247,152 @@ class SQLiteTeamQueue(BaseTeamQueue):
                     (attempts, error, available_at, now_s, message_id),
                 )
             self._conn.commit()
+
+
+class RedisTeamQueue(BaseTeamQueue):
+    """Redis-backed durable queue with visibility timeout semantics."""
+
+    _CLAIM_LUA = """
+    local pending_key = KEYS[1]
+    local inflight_key = KEYS[2]
+    local now = tonumber(ARGV[1])
+    local lock_until = tonumber(ARGV[2])
+
+    local expired = redis.call('ZRANGEBYSCORE', inflight_key, '-inf', now, 'LIMIT', 0, 50)
+    for _, message_id in ipairs(expired) do
+        redis.call('ZREM', inflight_key, message_id)
+        redis.call('ZADD', pending_key, now, message_id)
+    end
+
+    local ready = redis.call('ZRANGEBYSCORE', pending_key, '-inf', now, 'LIMIT', 0, 1)
+    if #ready == 0 then
+      return nil
+    end
+
+    local message_id = ready[1]
+    if redis.call('ZREM', pending_key, message_id) == 0 then
+      return nil
+    end
+
+    redis.call('ZADD', inflight_key, lock_until, message_id)
+    return message_id
+    """
+
+    def __init__(self, redis_url: str, key_prefix: str = "agentx:team"):
+        self._redis = Redis.from_url(redis_url, decode_responses=True)
+        self._prefix = key_prefix.rstrip(":") or "agentx:team"
+        self._id_key = f"{self._prefix}:sequence"
+        self._dlq_key = f"{self._prefix}:dead_letters"
+
+    def _pending_key(self, queue_name: str) -> str:
+        return f"{self._prefix}:queue:{queue_name}:pending"
+
+    def _inflight_key(self, queue_name: str) -> str:
+        return f"{self._prefix}:queue:{queue_name}:inflight"
+
+    def _message_key(self, message_id: int) -> str:
+        return f"{self._prefix}:message:{message_id}"
+
+    @staticmethod
+    def _now_iso() -> str:
+        return datetime.utcnow().isoformat()
+
+    async def publish(self, queue_name: str, payload: dict[str, Any]) -> int:
+        message_id = int(await self._redis.incr(self._id_key))
+        now_s = time.time()
+        now_iso = self._now_iso()
+
+        pipe = self._redis.pipeline(transaction=True)
+        pipe.hset(
+            self._message_key(message_id),
+            mapping={
+                "queue_name": queue_name,
+                "payload_json": json.dumps(payload, ensure_ascii=False),
+                "attempts": "0",
+                "error": "",
+                "created_at": now_iso,
+                "updated_at": now_iso,
+            },
+        )
+        pipe.zadd(self._pending_key(queue_name), {str(message_id): now_s})
+        await pipe.execute()
+        return message_id
+
+    async def claim(self, queue_name: str, consumer: str, visibility_timeout_s: int = 60) -> QueueItem | None:
+        del consumer  # Visibility lock is tracked via sorted-set scores in Redis.
+
+        now_s = time.time()
+        lock_until = now_s + visibility_timeout_s
+        message_id = await self._redis.eval(
+            self._CLAIM_LUA,
+            2,
+            self._pending_key(queue_name),
+            self._inflight_key(queue_name),
+            str(now_s),
+            str(lock_until),
+        )
+        if message_id is None:
+            return None
+
+        mid = int(message_id)
+        raw = await self._redis.hgetall(self._message_key(mid))
+        if not raw:
+            await self._redis.zrem(self._inflight_key(queue_name), str(mid))
+            return None
+
+        payload = json.loads(raw.get("payload_json", "{}"))
+        return QueueItem(
+            message_id=mid,
+            queue_name=queue_name,
+            payload=payload,
+            attempts=int(raw.get("attempts", "0")),
+        )
+
+    async def ack(self, message_id: int) -> None:
+        message_key = self._message_key(message_id)
+        queue_name = await self._redis.hget(message_key, "queue_name")
+        if not queue_name:
+            return
+
+        pipe = self._redis.pipeline(transaction=True)
+        pipe.zrem(self._inflight_key(queue_name), str(message_id))
+        pipe.delete(message_key)
+        await pipe.execute()
+
+    async def fail(self, message_id: int, error: str, retry_delay_s: int = 10, max_attempts: int = 3) -> None:
+        message_key = self._message_key(message_id)
+        raw = await self._redis.hgetall(message_key)
+        if not raw:
+            return
+
+        queue_name = raw.get("queue_name", "")
+        attempts = int(raw.get("attempts", "0")) + 1
+        now_iso = self._now_iso()
+
+        pipe = self._redis.pipeline(transaction=True)
+        if attempts >= max_attempts:
+            dlq_entry = {
+                "messageId": message_id,
+                "queueName": queue_name,
+                "payload": json.loads(raw.get("payload_json", "{}")),
+                "attempts": attempts,
+                "error": error,
+                "failedAt": now_iso,
+            }
+            pipe.zrem(self._inflight_key(queue_name), str(message_id))
+            pipe.delete(message_key)
+            pipe.lpush(self._dlq_key, json.dumps(dlq_entry, ensure_ascii=False))
+            pipe.ltrim(self._dlq_key, 0, 999)
+        else:
+            available_at_s = time.time() + retry_delay_s
+            pipe.hset(
+                message_key,
+                mapping={
+                    "attempts": str(attempts),
+                    "error": error,
+                    "updated_at": now_iso,
+                },
+            )
+            pipe.zrem(self._inflight_key(queue_name), str(message_id))
+            pipe.zadd(self._pending_key(queue_name), {str(message_id): available_at_s})
+        await pipe.execute()

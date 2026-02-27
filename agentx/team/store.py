@@ -46,6 +46,9 @@ class TeamStore:
         self._lock = threading.Lock()
         self._conn = sqlite3.connect(str(self.db_path), check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
+        self._conn.execute("PRAGMA journal_mode=WAL")
+        self._conn.execute("PRAGMA busy_timeout = 5000")
+        self._conn.execute("PRAGMA synchronous = NORMAL")
         self._init_schema()
 
     def _init_schema(self) -> None:
@@ -130,6 +133,15 @@ class TeamStore:
                     target TEXT NOT NULL,
                     detail_json TEXT NOT NULL,
                     created_at TEXT NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS queue_dead_letters (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    queue_name TEXT NOT NULL,
+                    payload_json TEXT NOT NULL,
+                    attempts INTEGER NOT NULL,
+                    error TEXT,
+                    failed_at TEXT NOT NULL
                 );
                 """
             )

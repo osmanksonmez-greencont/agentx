@@ -1212,7 +1212,7 @@ def team_board(
 def team_backup(
     output: str = typer.Option("", "--output", "-o", help="Backup archive path (.tar.gz)"),
 ):
-    """Create a backup for config, queue db, cron jobs, and workspace."""
+    """Create a backup for config, team queue DB (if used), cron jobs, and workspace."""
     import tarfile
     import tempfile
     import shutil
@@ -1227,7 +1227,7 @@ def team_backup(
     with tempfile.TemporaryDirectory() as td:
         tmp = Path(td)
         config_path = get_config_path()
-        queue_path = get_data_dir() / "team" / "queue.db"
+        queue_path = Path(cfg.team.queue.sqlite_path).expanduser()
         cron_jobs = get_data_dir() / "cron" / "jobs.json"
         if config_path.exists():
             shutil.copy2(config_path, tmp / "config.json")
@@ -1278,12 +1278,14 @@ def team_restore(
 
         if (tmp / "config.json").exists():
             shutil.copy2(tmp / "config.json", cfg_path)
-        if (tmp / "queue.db").exists():
-            shutil.copy2(tmp / "queue.db", data_dir / "team" / "queue.db")
         if (tmp / "cron" / "jobs.json").exists():
             shutil.copy2(tmp / "cron" / "jobs.json", data_dir / "cron" / "jobs.json")
 
         cfg = load_config()
+        queue_path = Path(cfg.team.queue.sqlite_path).expanduser()
+        queue_path.parent.mkdir(parents=True, exist_ok=True)
+        if (tmp / "queue.db").exists():
+            shutil.copy2(tmp / "queue.db", queue_path)
         if (tmp / "workspace").exists():
             if cfg.workspace_path.exists():
                 shutil.rmtree(cfg.workspace_path)

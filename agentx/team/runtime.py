@@ -13,7 +13,7 @@ from agentx.bus.queue import MessageBus
 from agentx.config.schema import Config
 from agentx.providers.base import LLMProvider
 from agentx.team.orchestrator import TeamOrchestrator
-from agentx.team.queue import BaseTeamQueue, InMemoryTeamQueue, SQLiteTeamQueue
+from agentx.team.queue import BaseTeamQueue, InMemoryTeamQueue, RedisTeamQueue, SQLiteTeamQueue
 from agentx.team.store import TeamStore
 from agentx.team.worker import TeamWorker
 
@@ -31,6 +31,8 @@ class TeamRuntime:
         qcfg = config.team.queue
         if qcfg.backend == "memory":
             return InMemoryTeamQueue()
+        if qcfg.backend == "redis":
+            return RedisTeamQueue(redis_url=qcfg.redis_url, key_prefix=qcfg.redis_prefix)
         return SQLiteTeamQueue(Path(qcfg.sqlite_path).expanduser())
 
     @staticmethod
