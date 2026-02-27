@@ -180,6 +180,28 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
             project_id = (query.get("projectId") or [""])[0] or None
             return _json(self, self.ctx.store.usage_summary(project_id=project_id))
 
+        if path == "/api/credits":
+            # OpenRouter credits endpoint
+            import os
+            import urllib.request
+            api_key = os.environ.get("OPENROUTER_API_KEY", "")
+            if not api_key:
+                return _json(self, {"error": "OPENROUTER_API_KEY not configured"})
+            try:
+                req = urllib.request.Request(
+                    "https://openrouter.ai/api/v1/credits",
+                    headers={"Authorization": f"Bearer {api_key}"}
+                )
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    data = json.loads(resp.read().decode())
+                    return _json(self, {
+                        "totalCredits": data.get("data", {}).get("total_credits", 0),
+                        "totalUsage": data.get("data", {}).get("total_usage", 0),
+                        "remainingCredits": data.get("data", {}).get("total_credits", 0) - data.get("data", {}).get("total_usage", 0)
+                    })
+            except Exception as e:
+                return _json(self, {"error": str(e)})
+
         if path.startswith("/api/terminal/sessions"):
             parts = [p for p in path.split("/") if p]
             if len(parts) == 3:  # /api/terminal/sessions

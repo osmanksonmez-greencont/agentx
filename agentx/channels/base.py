@@ -1,7 +1,7 @@
 """Base channel interface for chat platforms."""
 
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Callable, Awaitable
 
 from loguru import logger
 
@@ -30,6 +30,18 @@ class BaseChannel(ABC):
         self.config = config
         self.bus = bus
         self._running = False
+        self._on_inbound: Callable[[str, str], Awaitable[None]] | None = None  # Optional callback (channel, chat_id)
+        self._send_thinking_cb: Callable[[str, str], Awaitable[None]] | None = None  # Callback to send thinking
+    
+    def set_inbound_callback(self, callback: Callable[[str, str], Awaitable[None]]) -> None:
+        """Set callback to be called when inbound message is handled."""
+        self._on_inbound = callback
+    
+    async def send_thinking(self, chat_id: str) -> None:
+        """Send 'Thinking...' message to the chat."""
+        logger.info(f"DEBUG: send_thinking called for chat_id={chat_id}, cb={self._send_thinking_cb}")
+        if self._send_thinking_cb:
+            await self._send_thinking_cb(self.name, chat_id)
     
     @abstractmethod
     async def start(self) -> None:
@@ -113,6 +125,10 @@ class BaseChannel(ABC):
             )
             return
         
+        # Send "Thinking..." immediately when message is received
+        logger.info(f"DEBUG: handle_message called for sender={sender_id}, chat_id={chat_id}")
+        await self.send_thinking(str(chat_id))
+        
         msg = InboundMessage(
             channel=self.name,
             sender_id=str(sender_id),
@@ -124,6 +140,10 @@ class BaseChannel(ABC):
         )
         
         await self.bus.publish_inbound(msg)
+        
+        # Call inbound callback if set (e.g., to clear thinking state)
+        if self._on_inbound:
+            await self._on_inbound(self.name, str(chat_id))
     
     @property
     def is_running(self) -> bool:

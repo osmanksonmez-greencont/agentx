@@ -281,6 +281,20 @@ class TelegramChannel(BaseChannel):
                     except Exception as e2:
                         logger.error("Error sending Telegram message: {}", e2)
     
+    async def send_thinking(self, chat_id: str) -> None:
+        """Send 'Thinking...' message to the chat."""
+        if not self._app:
+            return
+        
+        try:
+            chat_id_int = int(chat_id)
+            await self._app.bot.send_message(
+                chat_id=chat_id_int,
+                text="🤔 Thinking..."
+            )
+        except Exception as e:
+            logger.error("Error sending thinking message: {}", e)
+    
     async def _on_start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handle /start command."""
         if not update.message or not update.effective_user:

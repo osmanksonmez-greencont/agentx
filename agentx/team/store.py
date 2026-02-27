@@ -499,7 +499,8 @@ class TeamStore:
                 COALESCE(SUM(prompt_tokens), 0) AS prompt_tokens,
                 COALESCE(SUM(completion_tokens), 0) AS completion_tokens,
                 COALESCE(SUM(total_tokens), 0) AS total_tokens,
-                COALESCE(SUM(estimated_cost_usd), 0) AS estimated_cost_usd
+                COALESCE(SUM(estimated_cost_usd), 0) AS estimated_cost_usd,
+                COUNT(DISTINCT task_id) AS task_count
             FROM team_usage
         """
         params: tuple[Any, ...] = ()
@@ -514,6 +515,11 @@ class TeamStore:
             "completionTokens": int(row["completion_tokens"] if row else 0),
             "totalTokens": int(row["total_tokens"] if row else 0),
             "estimatedCostUsd": float(row["estimated_cost_usd"] if row else 0.0),
+            # Frontend expected fields
+            "totalInputTokens": int(row["prompt_tokens"] if row else 0),
+            "totalOutputTokens": int(row["completion_tokens"] if row else 0),
+            "totalTasks": int(row["task_count"] if row else 0),
+            "totalCostUsd": float(row["estimated_cost_usd"] if row else 0.0),
         }
 
     def append_audit_log(self, actor: str, action: str, target: str, detail: dict[str, Any] | None = None) -> None:

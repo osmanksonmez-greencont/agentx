@@ -15,14 +15,31 @@ const tabs = document.querySelectorAll('.nav-item');
 const sections = document.querySelectorAll('.tab');
 
 // Tab Navigation
+function getSavedTab() {
+  return localStorage.getItem('cp_active_tab') || 'activity';
+}
+
+function setSavedTab(tabId) {
+  localStorage.setItem('cp_active_tab', tabId);
+}
+
+function activateTab(tabId) {
+  tabs.forEach(b => b.classList.remove('active'));
+  sections.forEach(s => s.classList.remove('active'));
+  const btn = document.querySelector(`.nav-item[data-tab="${tabId}"]`);
+  if (btn) btn.classList.add('active');
+  const section = document.getElementById(tabId);
+  if (section) section.classList.add('active');
+  const titleEl = document.getElementById('pageTitle');
+  if (titleEl && btn) {
+    titleEl.textContent = btn.querySelector('.nav-label').textContent;
+  }
+  setSavedTab(tabId);
+}
+
 tabs.forEach(btn => {
   btn.onclick = () => {
-    tabs.forEach(b => b.classList.remove('active'));
-    sections.forEach(s => s.classList.remove('active'));
-    btn.classList.add('active');
-    const tabId = btn.dataset.tab;
-    document.getElementById(tabId).classList.add('active');
-    document.getElementById('pageTitle').textContent = btn.querySelector('.nav-label').textContent;
+    activateTab(btn.dataset.tab);
   };
 });
 
@@ -288,6 +305,14 @@ function renderUnifiedBoard(tasks) {
 // Usage Tab
 async function refreshUsage() {
   try {
+    // Fetch OpenRouter credits
+    let credits = null;
+    try {
+      credits = await api('/api/credits');
+    } catch (e) {
+      console.warn('Failed to fetch credits:', e);
+    }
+    
     // Fetch usage for each project
     const usagePromises = allProjects.map(async (p) => {
       try {
@@ -301,18 +326,32 @@ async function refreshUsage() {
     const results = await Promise.all(usagePromises);
     
     // Calculate totals
-    let totalInput = 0, totalOutput = 0, totalTasks = 0;
+    let totalInput = 0, totalOutput = 0, totalTasks = 0, totalCost = 0;
     results.forEach(r => {
       if (r.usage) {
         totalInput += r.usage.totalInputTokens || 0;
         totalOutput += r.usage.totalOutputTokens || 0;
         totalTasks += r.usage.totalTasks || 0;
+        totalCost += r.usage.totalCostUsd || r.usage.estimatedCostUsd || 0;
       }
     });
     const total = totalInput + totalOutput;
     
     // Render summary
     const summaryContainer = document.getElementById('usageSummary');
+    let creditsHtml = '';
+    if (credits && !credits.error) {
+      creditsHtml = `
+        <div class="usage-stat">
+          <span class="usage-stat-label">OpenRouter Used</span>
+          <span class="usage-stat-value red">$${credits.totalUsage?.toFixed(2) || '0.00'}</span>
+        </div>
+        <div class="usage-stat">
+          <span class="usage-stat-label">OpenRouter Remaining</span>
+          <span class="usage-stat-value green">$${credits.remainingCredits?.toFixed(2) || '0.00'}</span>
+        </div>
+      `;
+    }
     summaryContainer.innerHTML = `
       <div class="usage-stat">
         <span class="usage-stat-label">Total Tokens</span>
@@ -330,6 +369,11 @@ async function refreshUsage() {
         <span class="usage-stat-label">Tasks</span>
         <span class="usage-stat-value orange">${totalTasks}</span>
       </div>
+      <div class="usage-stat">
+        <span class="usage-stat-label">Est. Cost</span>
+        <span class="usage-stat-value red">$${totalCost.toFixed(4)}</span>
+      </div>
+      ${creditsHtml}
     `;
     
     // Render breakdown
@@ -340,6 +384,7 @@ async function refreshUsage() {
       const input = r.usage?.totalInputTokens || 0;
       const output = r.usage?.totalOutputTokens || 0;
       const taskCount = r.usage?.totalTasks || 0;
+      const cost = r.usage?.totalCostUsd || r.usage?.estimatedCostUsd || 0;
       const totalProj = input + output;
       const pct = (totalProj / maxTokens) * 100;
       
@@ -348,6 +393,7 @@ async function refreshUsage() {
           <div class="usage-project-name">
             <span class="card-project">${r.project}</span>
             ${taskCount} tasks
+            <span style="color: var(--text-muted)">$${cost.toFixed(4)}</span>
           </div>
           <div class="usage-project-bars">
             <div class="usage-bar-container">
@@ -620,10 +666,39 @@ function updateLastRefresh() {
   }
 }
 
+// Theme Toggle
+function setTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('cp_theme', theme);
+  const themeIcon = document.querySelector('.theme-icon');
+  if (themeIcon) {
+    // Show icon of the mode you'll switch TO (intuitive)
+    themeIcon.textContent = theme === 'dark' ? '☀️' : '🌙';
+  }
+}
+
+function initTheme() {
+  // Always default to light mode - force light mode
+  const theme = 'light';
+  setTheme(theme);
+}
+
+// Theme toggle click handler
+document.getElementById('themeToggle')?.addEventListener('click', () => {
+  const current = document.documentElement.getAttribute('data-theme');
+  setTheme(current === 'dark' ? 'light' : 'dark');
+});
+
 // Initialize
 async function init() {
+  initTheme();
   await loadProjects();
-  refreshActivity();
+  
+  // Restore saved tab
+  const savedTab = getSavedTab();
+  activateTab(savedTab);
+  
+  refreshCurrentTab();
   refreshBoard();
   refreshUsage();
   refreshJobs();
